@@ -1,8 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_socket_io/flutter_socket_io.dart';
-import 'package:flutter_socket_io/socket_io_manager.dart';
+// import 'package:flutter_socket_io/flutter_socket_io.dart';
+// import 'package:flutter_socket_io/socket_io_manager.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class ChatPage extends StatefulWidget {
   @override
@@ -10,7 +11,7 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
-  SocketIO socketIO;
+  IO.Socket socketIO;
   List<String> messages;
   double height, width;
   TextEditingController textController;
@@ -24,14 +25,19 @@ class _ChatPageState extends State<ChatPage> {
     textController = TextEditingController();
     scrollController = ScrollController();
     //Creating the socket
-    socketIO = SocketIOManager().createSocketIO(
-      'https://real-chat-1234.herokuapp.com',
-      '/',
-    );
+    socketIO = IO.io("http://192.168.1.8:3000", <String, dynamic>{
+      "transports": ["websocket"],
+      "autoConnect": true,
+      'forceNew': true,
+      'reconnection': true,
+      'reconnectionDelay': 500,
+      'reconnectionAttempts': 10
+    });
     //Call init before doing anything with socket
-    socketIO.init();
+    // socketIO.init();
     //Subscribe to an event to listen to
-    socketIO.subscribe('receive_message', (jsonData) {
+    socketIO.on('receive_message', (jsonData) {
+      print(jsonData);
       //Convert the JSON data received into a Map
       Map<String, dynamic> data = json.decode(jsonData);
       this.setState(() => messages.add(data['message']));
@@ -99,7 +105,7 @@ class _ChatPageState extends State<ChatPage> {
         //Check if the textfield has text or not
         if (textController.text.isNotEmpty) {
           //Send the message as JSON data to send_message event
-          socketIO.sendMessage(
+          socketIO.emit(
               'send_message', json.encode({'message': textController.text}));
           //Add the message to the list
           this.setState(() => messages.add(textController.text));
